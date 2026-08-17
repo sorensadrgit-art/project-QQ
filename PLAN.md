@@ -113,12 +113,12 @@ A phase passes only when:
 - GitHub trigger and timer reconciliation both work;
 - clean rebuild from Git succeeds.
 
-### Phase 4 — Hermes integration
+### Phase 4 — Hermes Desktop integration
 
 **Builds**
 
-- Agent Browser MCP registration;
-- Knowledge Gateway MCP registration;
+- Desktop Hermes Agent Browser MCP registration;
+- Desktop Hermes Knowledge Gateway MCP registration;
 - source-controlled Hermes skills for retrieval and browser routing;
 - minimal durable operating instructions;
 - cross-surface verification for CLI and Desktop;
@@ -131,18 +131,91 @@ A phase passes only when:
 
 **Hands off**
 
-- Hermes config integration;
-- available `mcp_agent_browser_*` and `mcp_knowledge_*` tools;
-- routing skills;
+- Desktop Hermes config integration;
+- source-controlled `knowledge-retrieval` and `agent-browser-routing` skills;
+- available Agent Browser and Knowledge MCP capabilities;
 - verification report.
 
 **Pass criteria**
 
-- Hermes discovers both MCP servers;
+- Desktop Hermes discovers both MCP servers;
 - browser task uses Agent Browser;
 - technical question retrieves Qdrant context with provenance;
 - unavailable knowledge gateway degrades clearly instead of fabricating;
 - large docs are not copied into memory.
+
+### Phase 4B — Dual Hermes runtime convergence
+
+**Builds**
+
+- full supported Hermes update/backup/config-migration/doctor cycle on **Desktop Hermes and VPS Hermes**;
+- proof that Hermes Desktop is using the updated Desktop runtime/backend;
+- proof that any VPS Hermes gateway/service is running the updated VPS runtime;
+- bundled-skill synchronization on both hosts;
+- safe update checks/updates for already-installed Hub skills on both hosts;
+- skill security audit on both hosts;
+- source-controlled role-specific project skill registration on both hosts;
+- `skill-policy.yaml` as the authoritative Desktop/VPS role manifest;
+- native Hermes skill-router verification from fresh natural-language tasks;
+- post-update MCP reconnection tests for Desktop and VPS;
+- reusable runtime reconciliation and verification scripts.
+
+**Depends on**
+
+- Phase 4 source-controlled Hermes integration and project skills;
+- authorized access to both the Desktop Hermes runtime and VPS Hermes runtime.
+
+**Role contract**
+
+Both runtimes require:
+
+```text
+bundled skills synchronized from the updated Hermes release
+safe update/audit of already-installed Hub skills
+knowledge-retrieval project skill
+native Hermes skill router verified
+Knowledge MCP verified
+```
+
+Desktop additionally requires:
+
+```text
+agent-browser-routing project skill
+Agent Browser MCP verified
+Hermes Desktop backend/runtime match verified
+```
+
+VPS additionally requires:
+
+```text
+running Hermes gateway/service verified on updated runtime when used
+Knowledge MCP through localhost/private path
+```
+
+VPS does not require the Desktop browser skill/MCP unless Agent Browser is intentionally deployed there in a separately reviewed change.
+
+**Hands off**
+
+- `integrations/hermes/skill-policy.yaml`;
+- `integrations/hermes/runtime-baseline/` reconciliation/verification scripts;
+- redacted Desktop/VPS runtime compatibility matrix;
+- `docs/handoffs/04B-dual-hermes-runtime-convergence.md`.
+
+**Pass criteria**
+
+- `hermes update --check` clean on both selected update channels;
+- config check/migration and `hermes doctor` pass on both;
+- exact post-update versions/channels recorded;
+- Desktop GUI/backend uses the updated Desktop runtime;
+- VPS gateway/backend uses the updated VPS runtime when applicable;
+- required role skills appear in fresh runtime skill indexes;
+- no required skill is quarantined by security audit;
+- explicit skill load tests pass;
+- natural-language routing tests show the native skill router loading the correct project skill;
+- Desktop Knowledge MCP and Agent Browser MCP pass;
+- VPS Knowledge MCP passes;
+- Qdrant is not registered as a general Hermes tool;
+- no auth/session/browser state or secret values are copied between hosts.
 
 ### Phase 5 — Knowledge ingestion and ongoing operations
 
@@ -160,8 +233,8 @@ A phase passes only when:
 **Depends on**
 
 - Phase 1 knowledge repo;
-- Phase 3 indexer/gateway.
-- Hermes integration is optional for ingestion itself.
+- Phase 3 indexer/gateway;
+- Phase 4B must pass before the overall platform is declared fully operational, even though ingestion tooling can be developed earlier.
 
 **Hands off**
 
@@ -178,12 +251,24 @@ A phase passes only when:
 
 ## Project-wide contracts
 
+### Hermes dual-runtime contract
+
+The project has two first-class Hermes runtimes: Desktop and VPS. `HERMES_RUNTIME_BASELINE.md` is authoritative for their update, skills, router, and MCP requirements.
+
+- Both must use Hermes's official supported update path and be clean against their selected supported update channels.
+- Both must synchronize bundled skills, check/update installed Hub skills safely, and run skill security audit.
+- Project-specific skills remain Git-controlled under `hermes-platform/integrations/hermes/skills/` and are loaded through Hermes's supported external/project skill mechanism.
+- Hermes's native skill router is the required default. Do not add an unrelated third-party router unless a future reviewed design explicitly adopts it.
+- Role-required skills are declared in `hermes-platform/integrations/hermes/skill-policy.yaml`.
+- Skill-router success requires runtime evidence that a fresh natural-language task loads the intended skill; a model self-report is insufficient.
+- Never synchronize Desktop cookies, browser profile state, Hermes auth/session databases, or secret values to the VPS.
+
 ### Versioning
 
-Runtime dependencies are resolved from official stable release sources at execution time, then pinned. Every install/publish report records:
+Runtime dependencies are resolved from official stable release sources at execution time, then pinned or recorded exactly according to their supported distribution model. Every install/publish report records:
 
 - package/image name;
-- semantic version/tag;
+- semantic version/tag or exact commit where applicable;
 - immutable digest or lockfile version where supported;
 - retrieval/embedding schema version;
 - Git commit.
@@ -197,9 +282,10 @@ Never commit:
 - Agent Browser encryption keys;
 - browser cookies/state/profile contents;
 - GitHub deployment SSH private keys;
+- Hermes auth/session databases;
 - raw credentials.
 
-Secret files must be outside repository roots and mode `0600` on Unix. Services receive only the credentials they need.
+Secret files must be outside repository roots and mode `0600` on Unix where compatible. Services receive only the credentials they need.
 
 ### Knowledge schema v1
 
