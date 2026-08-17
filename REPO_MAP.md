@@ -16,6 +16,7 @@ ARCHITECTURE.md
 CONTRACTS.md
 DECISIONS.md
 EXECUTION_ORDER.md
+HERMES_RUNTIME_BASELINE.md
 KNOWLEDGE_STANDARDS.md
 INGESTION_CHECKLIST.md
 RECOVERY.md
@@ -26,10 +27,11 @@ prompts/
   02_agent_browser_installation_and_mcp.md
   03_qdrant_knowledge_platform_and_github_sync.md
   04_hermes_integration_and_operating_rules.md
+  04B_dual_hermes_runtime_update_skills_and_router_convergence.md
   05_knowledge_ingestion_and_update_workflow.md
 ```
 
-Purpose: project instructions, architecture, recovery knowledge, and cold-start prompts. A future agent can begin here without this ChatGPT conversation.
+Purpose: project instructions, architecture, recovery knowledge, Hermes runtime baseline, and cold-start prompts. A future agent can begin here without this ChatGPT conversation.
 
 Do **not** put browser authentication state, Qdrant storage, secrets, or the long-term Spline/GSAP/React/WebGL corpus here.
 
@@ -86,7 +88,7 @@ INGESTION_PLAYBOOK.md
 
 Once `hermes-knowledge` exists, future technical data belongs there—not in `project-QQ`.
 
-## 3. Prompt 02 — run on the browser/Hermes host
+## 3. Prompt 02 — run on the browser/Desktop Hermes host
 
 File:
 
@@ -161,7 +163,7 @@ Secrets stay on the VPS, for example:
 
 Those files must never be pushed to GitHub.
 
-## 5. Prompt 04 — run on the Hermes host/Desktop
+## 5. Prompt 04 — run on the Desktop Hermes host
 
 File:
 
@@ -171,17 +173,24 @@ prompts/04_hermes_integration_and_operating_rules.md
 
 Run where Hermes Agent/Hermes Desktop is installed.
 
-It connects Hermes to:
+It connects Desktop Hermes to:
 
 ```text
 Agent Browser MCP   → local stdio
 Knowledge MCP       → private/TLS/SSH-tunneled VPS endpoint
 ```
 
-It also installs the source-controlled routing skills under:
+It also creates the source-controlled project routing skills under:
 
 ```text
-hermes-platform/integrations/hermes/
+hermes-platform/integrations/hermes/skills/
+```
+
+including at minimum:
+
+```text
+knowledge-retrieval
+agent-browser-routing
 ```
 
 Hermes host-local config/secrets remain local:
@@ -193,7 +202,78 @@ Hermes host-local config/secrets remain local:
 
 The real `KNOWLEDGE_MCP_BEARER_TOKEN` stays in `~/.hermes/.env`; it is referenced by environment substitution from Hermes config and never committed.
 
-## 6. Prompt 05 — run from an authorized knowledge-development environment
+## 6. Prompt 04B — mandatory dual-Hermes convergence gate
+
+File:
+
+```text
+prompts/04B_dual_hermes_runtime_update_skills_and_router_convergence.md
+```
+
+Run after Prompt 04 with authorized access to **both** the Desktop Hermes runtime and the VPS Hermes runtime.
+
+This phase exists so the project does not accidentally validate only the desktop copy of Hermes.
+
+It must:
+
+```text
+Desktop Hermes
+  → full supported update + backup
+  → config migration + doctor
+  → verify Hermes Desktop uses updated backend
+  → sync/audit bundled + installed Hub skills
+  → load project skill directory
+  → require knowledge-retrieval + agent-browser-routing
+  → verify native skill router
+  → verify Knowledge MCP + Agent Browser MCP
+
+VPS Hermes
+  → full supported update + backup
+  → config migration + doctor
+  → restart/verify any Hermes gateway on updated runtime
+  → sync/audit bundled + installed Hub skills
+  → load project skill directory
+  → require knowledge-retrieval
+  → verify native skill router
+  → verify Knowledge MCP through local/private path
+```
+
+It creates/reconciles:
+
+```text
+hermes-platform/integrations/hermes/skill-policy.yaml
+hermes-platform/integrations/hermes/runtime-baseline/
+hermes-platform/docs/handoffs/04B-dual-hermes-runtime-convergence.md
+```
+
+### Native skill router
+
+Do not install a random third-party skill router. Hermes's native skill system/router is the required default. "Connected" means the role-required skills appear in the runtime skill index and a fresh natural-language test provably causes the correct skill to load and then call the intended MCP capability.
+
+### Role-specific skill policy
+
+Both Hermes runtimes:
+
+```text
+all bundled skills from the updated Hermes release
+safe updates for already-installed Hub skills
+security audit of installed skills
+knowledge-retrieval project skill
+```
+
+Desktop additionally:
+
+```text
+agent-browser-routing
+```
+
+VPS does not need the Desktop browser skill unless Agent Browser is separately and intentionally deployed on the VPS.
+
+Do not synchronize cookies, browser profiles, Hermes auth/session databases, provider keys, or `.env` secret values between the two machines.
+
+The project is not considered fully runtime-ready until Prompt 04B passes.
+
+## 7. Prompt 05 — run from an authorized knowledge-development environment
 
 File:
 
@@ -266,6 +346,7 @@ browser cookies/storage state/profiles
 SSH private keys
 populated .env files
 Hermes ~/.hermes/.env
+Hermes auth/session databases
 private authenticated browser screenshots containing secrets
 ```
 
@@ -279,6 +360,7 @@ If an agent loses context, start with:
 project-QQ/README.md
 project-QQ/REPO_MAP.md
 project-QQ/EXECUTION_ORDER.md
+project-QQ/HERMES_RUNTIME_BASELINE.md
 project-QQ/DECISIONS.md
 ```
 
