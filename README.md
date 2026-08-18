@@ -31,6 +31,8 @@ Prompts 02 and 03 may run in parallel after Prompt 01. A linear `01 → 02 → 0
 
 ## Files intentionally stored here
 
+- `.gitattributes` — forces stable LF text bytes across operating systems, including the checksummed patch artifact.
+- `.gitignore` — excludes local Python/tool caches and operating-system noise.
 - `README.md` — entry point for the project.
 - `REPO_MAP.md` — where every component/file belongs and where each prompt runs.
 - `PLAN.md` — final production architecture and phase contracts.
@@ -39,14 +41,40 @@ Prompts 02 and 03 may run in parallel after Prompt 01. A linear `01 → 02 → 0
 - `DECISIONS.md` — engineering assumptions and rationale.
 - `EXECUTION_ORDER.md` — prompt dependencies and safe parallelization.
 - `HERMES_RUNTIME_BASELINE.md` — required Desktop/VPS Hermes update, skills, router, and MCP baseline.
+- `SKILL_POLICY.md` — durable capability-selection and skill-router policy.
 - `KNOWLEDGE_STANDARDS.md` — durable source cleaning/chunking/provenance standard.
 - `INGESTION_CHECKLIST.md` — repeatable checklist for future data.
 - `RECOVERY.md` — rebuild and disaster-recovery rules.
 - `REFERENCES.md` — authoritative product/documentation references.
-- `VERIFICATION.md` — authoring-time verification scope and runtime limitations.
-- `prompts/` — the implementation prompts, including mandatory Prompt 04B.
+- `VERIFICATION.md` — current control-repository checks, evidence, and runtime limitations.
+- `skills/skill-router/SKILL.md` — reviewed bootstrap routing policy promoted into the operational platform repository.
+- `patches/hermes-desktop-managed-ssh.patch` and `patches/README.md` — exact-base emergency Windows SSH compatibility artifact and its provenance/application gate.
+- `scripts/validate_project.py` — fail-closed control-repository validator.
+- `scripts/verify_process.py` — one-command local validation, regression-test, and whitespace gate.
+- `tests/test_project_contracts.py` — regression tests for cross-phase contracts and patch applicability.
+- `.github/workflows/validate-project.yml` — least-privilege, SHA-pinned CI gate.
+- `prompts/` — the six implementation prompts, including mandatory Prompt 04B.
 
 The original downloadable archive also contained authoring/package-only artifacts such as the concatenated master prompt file, archive checksum manifest, package verifier, and Superpowers authoring documents. Those are useful for archival/audit purposes but are **not required for operating this GitHub project**, so they are intentionally not duplicated here.
+
+## Validate this control repository
+
+From a clean clone, run the one-command gate. Supplying the exact clean Hermes checkout proves the compatibility patch still applies; omitting it runs every control-repository check except that external apply test.
+
+```bash
+python scripts/verify_process.py \
+  --root . \
+  --hermes-source /absolute/path/to/hermes-agent-at-declared-base
+```
+
+The validator and regression suite can also be run separately:
+
+```bash
+python scripts/validate_project.py --root .
+python -m unittest discover -s tests -v
+```
+
+CI repeats the full sequence against the exact pinned Hermes base. A passing control-repository gate proves these documents and artifacts agree mechanically; it does not substitute for the live-host handoffs required by each phase.
 
 ## What this repository is not
 
@@ -77,7 +105,7 @@ The native skill router is part of Hermes's skill system; it is not a separate n
 Role baseline:
 
 ```text
-Both:    bundled Hermes skills + safe Hub updates/audit + knowledge-retrieval
+Both:    bundled Hermes skills + safe Hub updates/audit + skill-router + knowledge-retrieval
 Desktop: + agent-browser-routing
 VPS:     no Desktop browser skill unless Agent Browser is intentionally deployed there
 ```

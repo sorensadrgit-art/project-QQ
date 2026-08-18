@@ -343,7 +343,7 @@ Create a minimal repository-validation Python environment at the platform repo r
 Implement `hermes-platform/scripts/validate_repository.py` as a real Python 3.12 script. It may use the Python standard library plus the locked PyYAML dependency and no undeclared packages. It must accept:
 
 ```text
-uv run uv run python scripts/validate_repository.py --platform PATH --knowledge PATH
+uv run python scripts/validate_repository.py --platform PATH --knowledge PATH
 ```
 
 It must fail non-zero with actionable messages when:
@@ -415,9 +415,13 @@ Do not commit if validators fail.
 Run all checks available in the real environment. At minimum:
 
 ```bash
-python3 "$PLATFORM_REPO/scripts/validate_repository.py" \
-  --platform "$PLATFORM_REPO" \
-  --knowledge "$KNOWLEDGE_REPO"
+(
+  cd "$PLATFORM_REPO"
+  uv sync --frozen
+  uv run python scripts/validate_repository.py \
+    --platform "$PLATFORM_REPO" \
+    --knowledge "$KNOWLEDGE_REPO"
+)
 
 git -C "$PLATFORM_REPO" status --short
 git -C "$KNOWLEDGE_REPO" status --short
@@ -425,18 +429,18 @@ git -C "$PLATFORM_REPO" ls-files | sort
 git -C "$KNOWLEDGE_REPO" ls-files | sort
 ```
 
-Verify there are no unresolved conflict markers or forbidden placeholders:
+Verify unresolved merge markers separately. Placeholder detection belongs to the repository validator, which must exclude its own enforcement strings instead of using a self-matching broad grep:
 
 ```bash
 for repo in "$PLATFORM_REPO" "$KNOWLEDGE_REPO"; do
-  if git -C "$repo" grep -nE '^(<<<<<<<|=======|>>>>>>>)|TODO|TBD|FIXME'; then
-    echo "Forbidden marker found" >&2
+  if git -C "$REPO" grep -nE '^(<<<<<<<|=======|>>>>>>>)'; then
+    echo "Unresolved merge marker found" >&2
     exit 1
   fi
 done
 ```
 
-Run the CI-equivalent validator locally with the committed lockfile: `uv sync --frozen`, then `uv run python scripts/validate_repository.py --platform "$PLATFORM_REPO" --knowledge "$KNOWLEDGE_REPO"`. If `uv` itself is unavailable, install it using an authorized host/package-manager method, record the exact observed version, and rerun; if that is impossible, record the validation as not executable and do not label it passed.
+The commands above are the local CI equivalent because they use the committed lockfile. If `uv` itself is unavailable, install it using an authorized host/package-manager method, record the exact observed version, and rerun; if that is impossible, record validation as not executable and do not label it passed.
 
 ## Acceptance criteria
 

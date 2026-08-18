@@ -1,0 +1,59 @@
+name: Validate project control repository
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-qq-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      HERMES_BASE: 7cae03b8c02542ca2a9b95d7cd3c02b71010f796
+    steps:
+      - name: Check out control repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import sys
+          if not ((3, 12) <= sys.version_info[:2] < (3, 14)):
+              raise SystemExit(f"Unsupported Python: {sys.version}")
+          print(sys.version)
+          PY
+
+      - name: Materialize exact Hermes patch base
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          source_dir="$RUNNER_TEMP/hermes-agent"
+          git init "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/NousResearch/hermes-agent.git
+          timeout 120 git -C "$source_dir" fetch --depth=1 origin "$HERMES_BASE"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          test "$(git -C "$source_dir" rev-parse HEAD)" = "$HERMES_BASE"
+          printf 'HERMES_SOURCE=%s\n' "$source_dir" >> "$GITHUB_ENV"
+
+      - name: Run complete process verification
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/verify_process.py \
+            --root "$GITHUB_WORKSPACE" \
+            --hermes-source "$HERMES_SOURCE"

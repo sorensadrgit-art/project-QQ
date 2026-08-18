@@ -31,6 +31,12 @@ hermes-platform/SECURITY.md
 
 If a listed artifact does not exist, determine whether the producing phase actually ran. Do not synthesize a fake handoff. Continue only with work whose prerequisites are real and record the missing dependency.
 
+## Prerequisites
+
+Prompt 04 must have created the operational Hermes integration and project-skill directory. Both real Hermes hosts must be reachable through already-authorized local or SSH access, and the Phase 02/03 services assigned to each role must have real handoffs. A missing host, handoff, or credential is an explicit environment blocker; it is never permission to fabricate convergence evidence.
+
+The canonical bootstrap policy skill must be readable from `project-QQ/skills/skill-router/SKILL.md`. Prompt 04B promotes that reviewed file into the operational platform skill directory and verifies its hash before registering it on either host.
+
 ## Objective
 
 Bring the two Hermes runtimes to this end state:
@@ -43,7 +49,7 @@ Bring the two Hermes runtimes to this end state:
 - bundled skills synchronized;
 - installed Hub skills checked, safely updated, and security-audited;
 - source-controlled project skills loaded from `hermes-platform`;
-- `knowledge-retrieval` and `agent-browser-routing` visible and routable;
+- `skill-router`, `knowledge-retrieval`, and `agent-browser-routing` visible and routable;
 - native Hermes skill router proven by both explicit and natural-language routing tests;
 - Knowledge MCP healthy;
 - Agent Browser MCP healthy;
@@ -57,7 +63,7 @@ Bring the two Hermes runtimes to this end state:
 - bundled skills synchronized;
 - installed Hub skills checked, safely updated, and security-audited;
 - source-controlled project skills loaded from `hermes-platform`;
-- `knowledge-retrieval` visible and routable;
+- `skill-router` and `knowledge-retrieval` visible and routable;
 - native Hermes skill router proven by both explicit and natural-language routing tests;
 - Knowledge MCP healthy through localhost/private networking;
 - Qdrant remains internal and is not registered as a general agent tool;
@@ -72,6 +78,9 @@ You may create or modify only these source-controlled surfaces unless the existi
 ```text
 hermes-platform/integrations/hermes/
 ├── skill-policy.yaml
+├── skills/
+│   └── skill-router/
+│       └── SKILL.md
 ├── runtime-baseline/
 │   ├── README.md
 │   ├── reconcile-runtime.sh
@@ -101,7 +110,9 @@ You may modify each host's real Hermes configuration/state through supported Her
 
 Use Hermes's **native skill system/router** as the default and required routing layer. Current Hermes exposes skills through its skill index, `skills_list`, `skill_view`, slash commands, project/external directories, and prompt-time routing. Treat the router as part of the runtime, not as a standalone network service.
 
-A separate community semantic skill-router plugin is out of scope unless the repository already explicitly depends on one. If such a dependency already exists, inspect and validate it rather than installing a second competing router.
+The repository explicitly depends on the reviewed procedural policy skill at `project-QQ/skills/skill-router/SKILL.md`. Promote that exact content into `hermes-platform/integrations/hermes/skills/skill-router/SKILL.md`, record both SHA-256 hashes, and require them to match. This custom skill supplements—never replaces—the native Hermes skill-selection mechanism.
+
+A separate community semantic skill-router plugin remains out of scope. Do not install a second competing router.
 
 ## Required role policy
 
@@ -126,6 +137,7 @@ project_skills:
 roles:
   desktop:
     required_project_skills:
+      - skill-router
       - knowledge-retrieval
       - agent-browser-routing
     required_mcp_servers:
@@ -133,6 +145,7 @@ roles:
       - agent_browser
   vps:
     required_project_skills:
+      - skill-router
       - knowledge-retrieval
     required_mcp_servers:
       - knowledge
@@ -285,7 +298,31 @@ Project skills must remain source controlled at:
 hermes-platform/integrations/hermes/skills/
 ```
 
-Ensure each host has an authenticated/readable clone or deployment copy of `hermes-platform` at a stable path. Do not use a transient `/tmp` checkout as the configured skill source.
+Promote and verify the bootstrap router before host registration. Use real absolute repository paths; this Python operation is deterministic and fails if the copies differ:
+
+```bash
+PROJECT_QQ_REPO=/absolute/path/to/project-QQ
+PLATFORM_REPO=/absolute/path/to/hermes-platform
+export PROJECT_QQ_REPO PLATFORM_REPO
+python3 - <<'PY'
+import hashlib
+import os
+import shutil
+from pathlib import Path
+
+source = Path(os.environ["PROJECT_QQ_REPO"]) / "skills/skill-router/SKILL.md"
+target = Path(os.environ["PLATFORM_REPO"]) / "integrations/hermes/skills/skill-router/SKILL.md"
+target.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(source, target)
+source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+target_hash = hashlib.sha256(target.read_bytes()).hexdigest()
+if source_hash != target_hash:
+    raise SystemExit("skill-router promotion hash mismatch")
+print(f"SKILL_ROUTER_SHA256={target_hash}")
+PY
+```
+
+Ensure each host has an authenticated/readable clone or deployment copy of `hermes-platform` at a stable path. Do not use a transient `/tmp` checkout as the configured skill source. The operational skill directory should be read-only to the Hermes service/runtime identity when host permissions permit, because `skills.external_dirs` is a discovery mechanism rather than a write-protection boundary.
 
 Merge the platform skills path into Hermes's current supported external-skill configuration. On current Hermes this is expected to be:
 
@@ -304,6 +341,7 @@ Do not copy the skill files into Basic Memory or the permanent system prompt.
 Desktop must expose:
 
 ```text
+skill-router
 knowledge-retrieval
 agent-browser-routing
 ```
@@ -311,6 +349,7 @@ agent-browser-routing
 VPS must expose:
 
 ```text
+skill-router
 knowledge-retrieval
 ```
 

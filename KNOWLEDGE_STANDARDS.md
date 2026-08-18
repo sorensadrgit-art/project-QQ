@@ -168,16 +168,18 @@ Chunk after normalization.
 
 ## Chunk identity
 
-```text
-content_hash = sha256(canonical_chunk_content_utf8)
-chunk_id = sha256(
-  schema_version + "\n" +
-  domain + "\n" +
-  source_id + "\n" +
-  section_path_joined + "\n" +
-  content_hash + "\n" +
-  occurrence_index_for_identical_content_in_section
+```python
+canonical_identity = "\n".join(
+    [
+        "schema=1",
+        f"domain={domain}",
+        f"source_id={source_id}",
+        f"section={' > '.join(section_path)}",
+        f"content_hash={content_hash}",
+        f"occurrence={occurrence}",
+    ]
 )
+chunk_id = hashlib.sha256(canonical_identity.encode("utf-8")).hexdigest()
 ```
 
 The algorithm is deterministic and deliberately excludes source checksum and repository path. An unchanged chunk under the same `source_id` and section keeps its ID across source revisions and path refactors. If identical canonical content appears more than once in the same section, assign a zero-based occurrence index in document order so identities remain unique and deterministic. Moving a chunk to a different semantic section or changing its canonical content creates a new ID; the next full blue/green publish removes the old point.

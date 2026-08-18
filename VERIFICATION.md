@@ -1,10 +1,52 @@
 # Verification Report
 
+## Current control-repository verification
+
+The GitHub control repository now carries its own executable validator, regression tests, and SHA-pinned CI workflow. The current checks validate all six prompts, shared handoff and chunk-identity contracts, the managed-SSH patch format/applicability, Markdown fence balance, bounded skill metadata, and tracked-secret indicators.
+
+Run the full local gate from a clean clone:
+
+```bash
+python scripts/verify_process.py \
+  --root . \
+  --hermes-source /absolute/path/to/clean-hermes-checkout-at-the-declared-base
+```
+
+The underlying checks can also be run independently:
+
+```bash
+python scripts/validate_project.py --root .
+python -m unittest discover -s tests -v
+```
+
+For the managed-SSH regression, check out the declared Hermes base commit and pass it through `--hermes-source` or `HERMES_SOURCE`. Historical package evidence below remains historical and is not used as proof for current `main`.
+
+### Fresh audit evidence — 2026-08-18
+
+The 2026-08-18 repair was verified against a clean Hermes checkout at exact upstream commit `7cae03b8c02542ca2a9b95d7cd3c02b71010f796`.
+
+```text
+PROJECT_QQ_VALIDATION=PASS
+UNIT_TESTS=PASS 24/24
+PYTHON_COMPILEALL=PASS
+WORKFLOW_YAML_PARSE=PASS
+PROJECT_QQ_PROCESS_VERIFICATION=PASS
+PATCH_APPLY_CHECK=PASS
+HERMES_DESKTOP_TYPECHECK=PASS
+HERMES_DESKTOP_FOCUSED_ESLINT=PASS
+```
+
+The managed-SSH artifact has SHA-256 `969c57a9d59be2df80914510795c8a3843746801b33005ddb5876d5da98255a9`. The real Desktop host also confirmed that the Hermes-managed Git OpenSSH executable exists and can resolve effective SSH configuration, while Windows System OpenSSH remains available as fallback.
+
+Negative regressions deliberately changed the `knowledge_search` minimum query length, removed a required contract file, inserted populated secrets into JSON, exported shell variables, and `*.env.example` files, added a tracked `.env`, introduced trailing whitespace, and dirtied the exact-base Hermes checkout. Every corrupted state made `scripts/validate_project.py` exit non-zero. This demonstrates that the validator enforces contracts, source provenance, and secret boundaries rather than merely printing a success marker.
+
+These results verify the control repository and compatibility artifact. They do not replace Phase 02–05 live-service handoffs or claim that the entire distributed platform is currently deployed.
+
 ## Scope
 
 This report separates **artifact/package verification**, **GitHub project-control verification**, and **live deployment verification**.
 
-The original authoring environment had shell/Python/web access and could create/test the initial package, but it did not have the user's real VPS, Hermes installation, browser accounts, or corpus. The project-control repository is now connected and writable, but that still does not provide shell access to the actual Desktop Hermes or VPS Hermes runtimes. Therefore no live Hermes update, skill-router pass, or MCP runtime pass is claimed here until Prompt 04B executes on the real hosts.
+The original authoring environment had shell/Python/web access and could create/test the initial package, but it did not have the user's real VPS, Hermes installation, browser accounts, or corpus. During the 2026-08-18 repair, the real Windows Desktop host and its Hermes-managed SSH runtime were inspected, and the exact upstream Hermes source was compiled and linted; the VPS command relay was intermittently available earlier but was offline during final branch verification. Partial host inspection and a writable control repository do not prove Phase 02–05 runtime completion, so no live Hermes update, skill-router pass, or MCP runtime pass is claimed here until the required host handoffs exist.
 
 ## Original package hard evidence
 

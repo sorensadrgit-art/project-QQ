@@ -1,47 +1,53 @@
-# Base observed while verified: Hermes upstream 336059011521c595d00803be93d1652aaab58720
-# Purpose: On Soren's Windows Desktop, C:\Windows\System32\OpenSSH\ssh.exe exists
-# but exits 255 for both `-V` and `-G`. Hermes's managed Git OpenSSH at
-# ~/.hermes/git/usr/bin/ssh.exe works and reaches the VPS. Apply/reconcile this
-# patch after Hermes updates only if upstream still hard-codes Windows OpenSSH.
-# Do not overwrite upstream's resolveRemoteSshDashboardProfile logic.
+# Base commit: 7cae03b8c02542ca2a9b95d7cd3c02b71010f796
+# Target repository: https://github.com/NousResearch/hermes-agent
+# Target path: apps/desktop/electron/main.ts
+# Purpose: prefer Hermes-managed Git OpenSSH while preserving System OpenSSH fallback.
+# Apply only after the checks documented in patches/README.md.
 
 diff --git a/apps/desktop/electron/main.ts b/apps/desktop/electron/main.ts
+index 24fe3089140ba45e0ffbedf1ab0f1f7fef8b0ef8..0e33c72a2916433c3b064f742816c700b8ce4ca6 100644
 --- a/apps/desktop/electron/main.ts
 +++ b/apps/desktop/electron/main.ts
-@@
- function activeSshTerminalTarget() {
-@@
- }
-+
+@@ -722,6 +722,25 @@ function resolveHermesHome() {
+ 
+ const HERMES_HOME = resolveHermesHome()
+ 
++// Windows installs provision a managed Git/SSH client under HERMES_HOME.
++// Prefer that known runtime, while preserving System OpenSSH for installs
++// where the managed bundle is absent.
 +function desktopSshExecutable() {
-+  if (process.platform !== 'win32') {
++  if (!IS_WINDOWS) {
 +    return 'ssh'
 +  }
 +
-+  // Prefer the OpenSSH client bundled with the Hermes-managed Git install.
-+  // The Windows OpenSSH capability can be present but non-functional; the
-+  // managed client keeps Desktop SSH routing deterministic and self-contained.
 +  const managed = path.join(HERMES_HOME, 'git', 'usr', 'bin', 'ssh.exe')
 +
-+  if (fs.existsSync(managed)) {
-+    return managed
-+  }
-+
-+  return path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
++  return fs.existsSync(managed)
++    ? managed
++    : path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
 +}
 +
 +function spawnDesktopSsh(command, args, options) {
 +  return spawn(command === 'ssh' ? desktopSshExecutable() : command, args, options)
 +}
++
+ function pathWithHermesManagedNode(...entries) {
+   const managed = hermesManagedNodePathEntries(HERMES_HOME).filter(directoryExists)
+ 
+@@ -8853,11 +8872,7 @@ function activeSshTerminalTarget() {
+ }
  
  function effectiveSshConfigFingerprint(sshConfig) {
 -  const ssh =
 -    process.platform === 'win32'
 -      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
 -      : 'ssh'
+-
 +  const ssh = desktopSshExecutable()
-@@
-       {
+   const args = ['-G']
+ 
+   if (sshConfig.port) {
+@@ -8918,7 +8933,8 @@ async function bootstrapSshConnectionInner(profile, sshConfig, reuseToken, sourc
          rememberLog: sshRememberLog,
          ownershipId: sshOwnershipKey(profile),
          scope,
@@ -49,25 +55,40 @@ diff --git a/apps/desktop/electron/main.ts b/apps/desktop/electron/main.ts
 +        effectiveConfigFingerprint: sshConfig.effectiveConfigFingerprint,
 +        spawnFn: spawnDesktopSsh
        }
-@@
+     )
+     removeForceCleanup = lease.onForceCleanup(() => ssh.close())
+@@ -9256,7 +9272,7 @@ async function testDesktopConnectionConfig(input: any = {}) {
+ 
      const ssh = createSshProbeConnection(
        { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
 -      { rememberLog: sshRememberLog }
 +      { rememberLog: sshRememberLog, spawnFn: spawnDesktopSsh }
      )
-@@
+ 
+     try {
+@@ -12403,10 +12419,7 @@ ipcMain.handle('hermes:ssh-config:resolve', async (_event, host) => {
+     throw new Error('SSH host is required.')
+   }
+ 
 -  const ssh =
 -    process.platform === 'win32'
 -      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
 -      : 'ssh'
 +  const ssh = desktopSshExecutable()
-@@
+ 
+   return new Promise((resolve, reject) => {
+     const child = spawn(ssh, ['-G', '--', value], hiddenWindowsChildOptions({ stdio: ['ignore', 'pipe', 'pipe'] }))
+@@ -12643,7 +12656,7 @@ async function probeSshProfileInventory(connection) {
+ 
    const ssh = createSshProbeConnection(
      { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
 -    { rememberLog: sshRememberLog }
 +    { rememberLog: sshRememberLog, spawnFn: spawnDesktopSsh }
    )
-@@
+ 
+   try {
+@@ -14555,9 +14568,7 @@ ipcMain.handle('hermes:terminal:start', async (event, payload = {}) => {
+ 
    const ptyProcess = remote
      ? nodePty.spawn(
 -        process.platform === 'win32'
@@ -75,3 +96,5 @@ diff --git a/apps/desktop/electron/main.ts b/apps/desktop/electron/main.ts
 -          : 'ssh',
 +        desktopSshExecutable(),
          buildInteractiveSshArgs(sshTarget.ssh, String(payload?.cwd || '').trim(), undefined, remoteCommand),
+         { cols, cwd: app.getPath('home'), env: terminalShellEnv(), name: 'xterm-256color', rows }
+       )
