@@ -1,0 +1,77 @@
+# Base observed while verified: Hermes upstream 336059011521c595d00803be93d1652aaab58720
+# Purpose: On Soren's Windows Desktop, C:\Windows\System32\OpenSSH\ssh.exe exists
+# but exits 255 for both `-V` and `-G`. Hermes's managed Git OpenSSH at
+# ~/.hermes/git/usr/bin/ssh.exe works and reaches the VPS. Apply/reconcile this
+# patch after Hermes updates only if upstream still hard-codes Windows OpenSSH.
+# Do not overwrite upstream's resolveRemoteSshDashboardProfile logic.
+
+diff --git a/apps/desktop/electron/main.ts b/apps/desktop/electron/main.ts
+--- a/apps/desktop/electron/main.ts
++++ b/apps/desktop/electron/main.ts
+@@
+ function activeSshTerminalTarget() {
+@@
+ }
++
++function desktopSshExecutable() {
++  if (process.platform !== 'win32') {
++    return 'ssh'
++  }
++
++  // Prefer the OpenSSH client bundled with the Hermes-managed Git install.
++  // The Windows OpenSSH capability can be present but non-functional; the
++  // managed client keeps Desktop SSH routing deterministic and self-contained.
++  const managed = path.join(HERMES_HOME, 'git', 'usr', 'bin', 'ssh.exe')
++
++  if (fs.existsSync(managed)) {
++    return managed
++  }
++
++  return path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
++}
++
++function spawnDesktopSsh(command, args, options) {
++  return spawn(command === 'ssh' ? desktopSshExecutable() : command, args, options)
++}
+ 
+ function effectiveSshConfigFingerprint(sshConfig) {
+-  const ssh =
+-    process.platform === 'win32'
+-      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
+-      : 'ssh'
++  const ssh = desktopSshExecutable()
+@@
+       {
+         rememberLog: sshRememberLog,
+         ownershipId: sshOwnershipKey(profile),
+         scope,
+-        effectiveConfigFingerprint: sshConfig.effectiveConfigFingerprint
++        effectiveConfigFingerprint: sshConfig.effectiveConfigFingerprint,
++        spawnFn: spawnDesktopSsh
+       }
+@@
+     const ssh = createSshProbeConnection(
+       { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
+-      { rememberLog: sshRememberLog }
++      { rememberLog: sshRememberLog, spawnFn: spawnDesktopSsh }
+     )
+@@
+-  const ssh =
+-    process.platform === 'win32'
+-      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
+-      : 'ssh'
++  const ssh = desktopSshExecutable()
+@@
+   const ssh = createSshProbeConnection(
+     { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
+-    { rememberLog: sshRememberLog }
++    { rememberLog: sshRememberLog, spawnFn: spawnDesktopSsh }
+   )
+@@
+   const ptyProcess = remote
+     ? nodePty.spawn(
+-        process.platform === 'win32'
+-          ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
+-          : 'ssh',
++        desktopSshExecutable(),
+         buildInteractiveSshArgs(sshTarget.ssh, String(payload?.cwd || '').trim(), undefined, remoteCommand),
