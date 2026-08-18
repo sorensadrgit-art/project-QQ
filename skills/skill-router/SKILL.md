@@ -1,6 +1,6 @@
 ---
 name: skill-router
-description: "Capability decision layer for choosing, combining, acquiring, routing, and verifying skills, tools, memory, MCPs, agents, and connected services."
+description: "Routes tasks across available capabilities and verifies outcomes."
 version: 1.0.0
 platforms: [linux, macos, windows]
 metadata:

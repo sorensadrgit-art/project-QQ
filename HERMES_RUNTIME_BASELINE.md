@@ -102,9 +102,12 @@ hub:
   check_updates: true
   update_outdated: true
   audit_installed: true
+project_skills:
+  source_dir: integrations/hermes/skills
 roles:
   desktop:
     required_project_skills:
+      - skill-router
       - knowledge-retrieval
       - agent-browser-routing
     required_mcp_servers:
@@ -112,6 +115,7 @@ roles:
       - agent_browser
   vps:
     required_project_skills:
+      - skill-router
       - knowledge-retrieval
     required_mcp_servers:
       - knowledge

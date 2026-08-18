@@ -187,10 +187,34 @@ This file records assumptions made autonomously because the requested workflow e
 
 **What changes this:** A future repository-wide tooling environment may absorb the validator if it preserves a locked YAML parser and the same CLI contract.
 
-## D-024 — Memory provider installation is outside this five-prompt scope
+## D-024 — Memory provider installation is outside this six-prompt scope
 
 **Decision:** Phase 04 defines the routing boundary for durable user/project memory but does not install or migrate Basic Memory, Graphify, or another memory provider. It preserves and uses the Hermes host's existing supported memory capability.
 
 **Rationale:** The technical knowledge platform must not be coupled to a particular personal-memory implementation, and no current repository/host evidence establishes which memory provider is already installed.
 
 **What changes this:** Add a separate audited integration phase if a specific memory provider must be installed, migrated, or synchronized.
+
+## D-025 — The control repository is executable and fail-closed
+
+**Decision:** Keep a standard-library repository validator, regression suite, one-command verification wrapper, and least-privilege SHA-pinned GitHub Actions workflow inside `project-QQ`.
+
+**Rationale:** A prompt library can drift while remaining readable. The control repository now rejects missing artifacts, cross-phase contract mismatches, malformed patches, unsafe secret examples, role-policy drift, broken Markdown, tracked secret classes, and unpinned Actions before changes reach `main`.
+
+**What changes this:** A replacement verifier is acceptable only if it remains dependency-minimal, deterministic, fail-closed, runnable from a clean clone, and covers every current invariant plus deliberate negative tests.
+
+## D-026 — Managed SSH remains an exact-base compatibility patch
+
+**Decision:** Keep `patches/hermes-desktop-managed-ssh.patch` as an emergency, exact-base compatibility artifact rather than a standing Hermes fork or a normal Phase 04 modification.
+
+**Rationale:** Current Hermes Desktop has multiple Windows SSH launch boundaries. The compatibility artifact must cover all of them, prefer the Hermes-managed Git OpenSSH executable, preserve System OpenSSH fallback, record its exact upstream base and SHA-256, and pass upstream typecheck/lint plus clean `git apply --check` evidence. It is not applied when upstream already provides equivalent behavior or when the selected revision differs from the recorded base.
+
+**What changes this:** Remove the patch after an official upstream release provides and verifies equivalent managed-SSH selection. Rebase only from fresh upstream source with new base, checksum, typecheck, lint, and apply evidence.
+
+## D-027 — The reviewed router policy is promoted, not independently rewritten
+
+**Decision:** Treat `project-QQ/skills/skill-router/SKILL.md` as the bootstrap reviewed copy, then promote it byte-for-byte into `hermes-platform/integrations/hermes/skills/skill-router/SKILL.md` and verify matching SHA-256 values.
+
+**Rationale:** Both Hermes roles need the same procedural capability-routing policy, while Hermes's native skill index remains the actual selection mechanism. Hash-verified promotion prevents Desktop/VPS policy drift without creating a competing router daemon or Hermes-core fork.
+
+**What changes this:** A future reviewed version may replace the skill when both repositories update atomically, the role policy references the new version, and both host runtimes pass explicit and natural-language routing verification.

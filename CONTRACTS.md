@@ -177,6 +177,7 @@ docs/handoffs/01-foundation.md
 docs/handoffs/02-agent-browser.md
 docs/handoffs/03-qdrant-knowledge-platform.md
 docs/handoffs/04-hermes-integration.md
+docs/handoffs/04B-dual-hermes-runtime-convergence.md
 docs/handoffs/05-knowledge-ingestion.md
 ```
 

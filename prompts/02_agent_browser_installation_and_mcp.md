@@ -66,7 +66,7 @@ published_at: RFC3339 UTC timestamp
 
 **Retrieval contract**
 
-- Dense vector: `BAAI/bge-small-en-v1.5`, 384 dimensions, cosine distance.
+- Dense vector: `BAAI/bge-small-en-v1.5`, 384 dimensions, cosine.
 - Sparse vector: `Qdrant/bm25` with IDF enabled as required by Qdrant.
 - Fusion: reciprocal-rank fusion.
 - `top_k`: default 8, minimum 1, hard maximum 12.
@@ -177,15 +177,31 @@ $HOME/.config/hermes-platform/
 
 Create the directories with `umask 077`.
 
-Generate a 32-byte state encryption key:
+Create the host-local state encryption key without printing it. Preserve an existing valid key so previously saved encrypted sessions remain readable:
 
 ```bash
 umask 077
 mkdir -p "$HOME/.config/hermes-platform/agent-browser/"{profile,states,logs}
-openssl rand -hex 32
+ENV_FILE="$HOME/.config/hermes-platform/agent-browser.env"
+
+if [ -e "$ENV_FILE" ]; then
+  chmod 0600 "$ENV_FILE"
+  grep -Eq '^AGENT_BROWSER_ENCRYPTION_KEY=[0-9a-f]{64}$' "$ENV_FILE"
+else
+  tmp="$(mktemp "${ENV_FILE}.tmp.XXXXXX")"
+  trap 'rm -f "$tmp"' EXIT
+  {
+    printf 'AGENT_BROWSER_ENCRYPTION_KEY='
+    openssl rand -hex 32
+  } >"$tmp"
+  chmod 0600 "$tmp"
+  grep -Eq '^AGENT_BROWSER_ENCRYPTION_KEY=[0-9a-f]{64}$' "$tmp"
+  mv -f "$tmp" "$ENV_FILE"
+  trap - EXIT
+fi
 ```
 
-Write `AGENT_BROWSER_ENCRYPTION_KEY=` followed immediately by the generated 64-hex value into the host-local `agent-browser.env`. The produced file contains the real value; it must never enter Git or the handoff report. Set mode 0600. The source-controlled `env.example` leaves this value empty. If Agent Browser's currently documented environment-variable name differs, use the official current name and update the local wrapper plus documentation; do not invent compatibility aliases.
+The produced file contains the real value and must never enter Git, logs, terminal output, screenshots, or the handoff report. The source-controlled `env.example` leaves this value empty. If Agent Browser's currently documented environment-variable name differs, use the official current name and update the local wrapper plus documentation; do not invent compatibility aliases.
 
 ### Authentication persistence modes
 

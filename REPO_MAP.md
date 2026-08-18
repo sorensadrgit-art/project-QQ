@@ -9,6 +9,8 @@ This file answers one question: **what goes where?**
 Keep here:
 
 ```text
+.gitattributes
+.gitignore
 README.md
 REPO_MAP.md
 PLAN.md
@@ -17,11 +19,24 @@ CONTRACTS.md
 DECISIONS.md
 EXECUTION_ORDER.md
 HERMES_RUNTIME_BASELINE.md
+SKILL_POLICY.md
 KNOWLEDGE_STANDARDS.md
 INGESTION_CHECKLIST.md
 RECOVERY.md
 REFERENCES.md
 VERIFICATION.md
+skills/
+  skill-router/SKILL.md
+patches/
+  README.md
+  hermes-desktop-managed-ssh.patch
+scripts/
+  validate_project.py
+  verify_process.py
+tests/
+  test_project_contracts.py
+.github/workflows/
+  validate-project.yml
 prompts/
   01_foundation_and_repo_governance.md
   02_agent_browser_installation_and_mcp.md
@@ -32,6 +47,15 @@ prompts/
 ```
 
 Purpose: project instructions, architecture, recovery knowledge, Hermes runtime baseline, and cold-start prompts. A future agent can begin here without this ChatGPT conversation.
+
+The executable control-repository gate is anchored by these exact paths:
+
+- `skills/skill-router/SKILL.md`
+- `patches/hermes-desktop-managed-ssh.patch`
+- `patches/README.md`
+- `scripts/validate_project.py`
+- `scripts/verify_process.py`
+- `.github/workflows/validate-project.yml`
 
 Do **not** put browser authentication state, Qdrant storage, secrets, or the long-term Spline/GSAP/React/WebGL corpus here.
 
@@ -189,6 +213,7 @@ hermes-platform/integrations/hermes/skills/
 including at minimum:
 
 ```text
+skill-router
 knowledge-retrieval
 agent-browser-routing
 ```
@@ -223,7 +248,7 @@ Desktop Hermes
   → verify Hermes Desktop uses updated backend
   → sync/audit bundled + installed Hub skills
   → load project skill directory
-  → require knowledge-retrieval + agent-browser-routing
+  → require skill-router + knowledge-retrieval + agent-browser-routing
   → verify native skill router
   → verify Knowledge MCP + Agent Browser MCP
 
@@ -233,7 +258,7 @@ VPS Hermes
   → restart/verify any Hermes gateway on updated runtime
   → sync/audit bundled + installed Hub skills
   → load project skill directory
-  → require knowledge-retrieval
+  → require skill-router + knowledge-retrieval
   → verify native skill router
   → verify Knowledge MCP through local/private path
 ```
@@ -258,6 +283,7 @@ Both Hermes runtimes:
 all bundled skills from the updated Hermes release
 safe updates for already-installed Hub skills
 security audit of installed skills
+skill-router project skill
 knowledge-retrieval project skill
 ```
 

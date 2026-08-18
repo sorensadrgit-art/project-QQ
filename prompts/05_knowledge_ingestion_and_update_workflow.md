@@ -413,13 +413,12 @@ Before identity computation, normalize line endings in `normalized_chunk_content
 
 ```python
 content_hash = hashlib.sha256(normalized_chunk_content.encode("utf-8")).hexdigest()
-section_key = " > ".join(section_path)
 canonical_identity = "\n".join(
     [
         "schema=1",
-        f"domain={source.domain}",
-        f"source_id={source.source_id}",
-        f"section={section_key}",
+        f"domain={domain}",
+        f"source_id={source_id}",
+        f"section={' > '.join(section_path)}",
         f"content_hash={content_hash}",
         f"occurrence={occurrence}",
     ]

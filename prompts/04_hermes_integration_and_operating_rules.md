@@ -187,6 +187,8 @@ hermes-platform/integrations/hermes/
 │   ├── install-knowledge-token
 │   └── knowledge-mcp-tunnel
 └── skills/
+    ├── skill-router/
+    │   └── SKILL.md
     ├── agent-browser-routing/
     │   └── SKILL.md
     └── knowledge-retrieval/
@@ -308,6 +310,12 @@ Hermes commonly prefixes MCP tool names by server. Do not hard-code final tool n
 ## External skills integration
 
 Use Hermes's supported external skill-directory configuration so `hermes-platform/integrations/hermes/skills` remains source controlled and does not need to be copied into private memory. If the current Hermes release uses `skills.external_dirs`, add the platform skill directory there.
+
+Promote the reviewed bootstrap policy skill from `project-QQ/skills/skill-router/SKILL.md` to `hermes-platform/integrations/hermes/skills/skill-router/SKILL.md`. Copy bytes exactly, compute SHA-256 for both files, and fail if the hashes differ. This procedural skill supplements Hermes's native skill-selection mechanism; it does not replace or fork Hermes core.
+
+### `skill-router/SKILL.md`
+
+Keep the promoted copy byte-identical to the control repository. It defines the capability-selection loop, memory-versus-knowledge boundary, safe acquisition policy, fallback behavior, and evidence-before-completion rule used by both Desktop and VPS roles.
 
 ### `agent-browser-routing/SKILL.md`
 

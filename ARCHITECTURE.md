@@ -140,11 +140,13 @@ Raw binary video is not committed. Store transcript text, permitted document sou
 
 ## Retrieval data model
 
-The physical Qdrant collection is versioned, for example:
+Every physical Qdrant collection uses the canonical runtime-generated grammar:
 
 ```text
-knowledge_v1_4f39c21a
+knowledge_v1_YYYYMMDDTHHMMSSZ_GIT12
 ```
+
+The timestamp is UTC and `GIT12` is the first 12 lowercase characters of the exact source Git object ID. Implementations construct the real name at publish time; this string is the grammar, not a hard-coded collection name.
 
 The stable alias is always:
 
@@ -163,22 +165,22 @@ Domains such as `spline`, `gsap`, `react`, and `webgl` are payload values and in
 
 ## Publish flow
 
-1. Acquire a VPS-side publish lock.
-2. Fetch the exact knowledge Git commit.
-3. Validate repository schema and provenance.
-4. Normalize/chunk using the pinned schema.
-5. Reuse cached embeddings by content hash where safe.
-6. Create a new versioned Qdrant collection.
-7. Create payload indexes before bulk upload.
-8. Upload all points.
-9. Run count, metadata, deterministic retrieval, and provenance tests.
-10. Atomically switch `knowledge_current` from the previous collection to the new collection.
-11. Create a snapshot of the newly active collection.
-12. Retain the previous two healthy collections plus the current collection.
-13. Record the active Git commit and collection in an immutable publish report.
-14. Release the lock.
+1. Acquire the VPS-side publication lock.
+2. Verify the knowledge checkout is clean and exactly at the requested Git object ID.
+3. Validate repository schema, provenance, rights, and manifests.
+4. Call the canonical Phase 03 indexer planner on normalized Markdown.
+5. Estimate disk headroom, then reuse cached embeddings by content hash where valid.
+6. Create a new versioned staging collection and all required payload indexes.
+7. Embed and upload bounded batches; assert point count equals the deterministic plan.
+8. Run fixture and repository retrieval regressions plus provenance checks.
+9. Atomically write the staging build sidecar with state `verified_staging`.
+10. Perform one atomic alias change for `knowledge_current`.
+11. Verify the alias and sidecar agree on the full source commit, then mark the sidecar `active`.
+12. Snapshot the active collection.
+13. Retain the active build plus the two immediately previous healthy builds.
+14. Emit the machine-readable publish report and release the lock.
 
-If any step before the alias switch fails, delete the failed staging collection and leave production untouched.
+A pre-switch failure deletes the staging collection and leaves production untouched. A post-switch verification or snapshot failure atomically restores the previous healthy alias target and marks the failed build `failed_post_switch`.
 
 ## GitHub synchronization
 
@@ -203,37 +205,46 @@ Input:
 
 ```json
 {
-  "query": "string, 1..4000 characters",
-  "domains": ["optional-domain"],
-  "source_types": ["official_doc"],
+  "query": "string, 2..4000 characters",
   "top_k": 8,
-  "include_content": true
+  "domains": [],
+  "source_types": [],
+  "rights": [],
+  "language": null,
+  "schema_version": 1
 }
 ```
 
 Rules:
 
-- `top_k` defaults to 8 and is clamped to 1..12.
-- `domains` and `source_types` are exact allowlisted filters.
-- Search uses dense + BM25 retrieval and RRF.
-- Returned vectors are never exposed.
-- Returned text is wrapped/marked as untrusted retrieved content for the agent.
-- Results include provenance.
+- `top_k` defaults to 8; values below 1 or above 12 are validation errors, so `top_k > 12 is rejected` rather than silently clamped.
+- `domains`, `source_types`, `rights`, `language`, and `schema_version` are exact allowlisted payload filters.
+- The dense query input begins with `query: `; dense and BM25 results are fused with reciprocal-rank fusion.
+- Retrieval has a 10-second default end-to-end deadline and at most one retry for a clearly transient Qdrant connection failure.
+- Returned vectors and generic Qdrant syntax are never exposed.
+- Total returned content is bounded to 60,000 characters.
 
-Output result item:
+Output:
 
 ```json
 {
-  "chunk_id": "sha256 hex",
-  "title": "string",
-  "content": "markdown",
-  "domain": "spline",
-  "source_type": "official_doc",
-  "source_url": "https URL or null",
-  "source_path": "normalized/spline/...",
-  "section_path": ["Animation", "States"],
-  "repo_commit": "40-char git SHA",
-  "score": 0.0
+  "query": "original query",
+  "active_collection": "knowledge_v1_...",
+  "active_repo_commit": "40-or-64-character git object ID",
+  "hits": [
+    {
+      "score": 0.0,
+      "content": "markdown",
+      "title": "string",
+      "source_id": "stable-source-id",
+      "source_path": "normalized/spline/...",
+      "source_url": "https URL or null",
+      "domain": "spline",
+      "section_path": ["Animation", "States"],
+      "rights": "public_reference",
+      "repo_commit": "40-or-64-character git object ID"
+    }
+  ]
 }
 ```
 

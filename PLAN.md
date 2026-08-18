@@ -342,7 +342,23 @@ related_chunk_ids
 - Long code blocks that exceed the dynamic budget are split at safe line/function/blank-line boundaries into separately fenced fragments with explicit part context; never rely on tokenizer truncation.
 - Embed `passage:` + title + heading path + domain context, but keep canonical payload `content` unchanged.
 - Query embeddings use a `query:` prefix.
-- Chunk identity is `sha256(schema_version + domain + source_id + semantic section path + content_hash + duplicate-occurrence index)`; it excludes source checksum, repository path, and publish commit so unchanged chunks remain stable across source revisions and path refactors.
+- The indexer computes chunk identity from this exact canonical construction:
+
+```python
+canonical_identity = "\n".join(
+    [
+        "schema=1",
+        f"domain={domain}",
+        f"source_id={source_id}",
+        f"section={' > '.join(section_path)}",
+        f"content_hash={content_hash}",
+        f"occurrence={occurrence}",
+    ]
+)
+chunk_id = hashlib.sha256(canonical_identity.encode("utf-8")).hexdigest()
+```
+
+The identity excludes source checksum, repository path, and publish commit, so unchanged chunks remain stable across source revisions and path refactors.
 - Exact duplicate chunks by normalized content hash are stored once per source lineage; cross-source duplicates remain separate when provenance differs.
 
 ### Retrieval
